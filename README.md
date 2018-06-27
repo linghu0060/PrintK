@@ -1,2 +1,25 @@
-# PrintK
-The standard C function printf, renamed to printk because of can be used in interrupt and reentrant. | 标准C库函数 printf 的简单实现, 因为可重入以及可以用于中断服务程序而重命名为 printk
+# printk -- 标准C库函数 printf 的重新实现
+
+## 介绍
+因为标准C库函数 printf 不能用于中断与异常处理程序，所以需要一个类似于 Linux printk 函数。
+本 printk 源代码符合 ANSI C 标准，具有可重入、线程安全、可用于中断与异常处理等特点。
+
+## 限制
+除不支持任何浮点、long long 类型格式化输出外，其他特性与标准C库函数一致
+
+## 如何重定向输出
+修改 printk_cfg.h 中的宏定义
+- 1、KERNEL_PUT_ENTER() 开始输出字符，一般为设置串口为查询工作方式
+- 2、KERNEL_PUT_LEAVE() 结束输出字符，一般为恢复串口设置
+- 3、KERNEL_PUT_CHAR()  输出一个字符，一般为使用串口查询方式输出
+为保证 printk 可用于中断与异常处理程序，上述宏中不要使用 信号量、互斥量 等操作系统函数，使用查询方式而非中断方式输出。
+
+## 目录结构与文件概叙
+- /cfg/ -------------------- 配置文件目录
+- /inc/ -------------------- 头文件目录
+- /src/ -------------------- 源文件目录
+- /cfg/printk_cfg.h -------- 当前配置文件
+- /inc/printk_cfg.h.org ---- 配置文件模板
+- /inc/printk.h ------------ 头文件
+- /src/printk.c ------------ 源文件
+
