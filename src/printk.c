@@ -14,6 +14,9 @@
 *** @par Change Logs:
 ***      2018/6/21 -- Linghu -- the first version
 ***********************************************************************************************************/
+//lint -emacro((835), ZEROPAD)
+//lint -emacro((732), va_start)
+//lint -emacro((740), va_start, va_arg)
 
 #include "ctype.h"
 #include "string.h"
@@ -22,6 +25,23 @@
 #include "../cfg/printk_cfg.h"
 #include "../inc/printk.h"
 
+#ifdef _lint
+#undef va_start
+#undef va_arg
+#undef va_end
+//lint ++d"va_start(ap, parmN) = ( *((char**)&(ap)) = ((char*)&(parmN) + sizeof(parmN)) )"
+//lint ++d"va_arg(ap, type)    = ( *((*((type**)&(ap)))++) )"
+//lint ++d"va_end(ap)          = ( (void)(ap) )"
+#endif
+#if 0
+#undef va_start
+#undef va_arg
+#undef va_end
+#define va_start(ap, parmN)   ( TO_PTR(ap, char) = ((char*)&(parmN) + sizeof(parmN)) )
+#define va_arg(ap, type)      ( *(TO_PTR(ap, type)++) )
+#define va_end(ap)            ( (void)(ap) )
+#define TO_PTR(ap, type)      ( *((type**)&(ap)) )
+#endif
 /**********************************************************************************************************/
 /** @addtogroup PrintK
 *** @{
@@ -251,14 +271,14 @@ int vprintk( const char *fmt, va_list args )
                     KERNEL_PUT_CHAR(' ');    nbr++;         /* Put width        */
                 }
             }
-            KERNEL_PUT_CHAR((uint8_t)va_arg(args, int));    nbr++;
+            KERNEL_PUT_CHAR(va_arg(args, int));    nbr++;
             for(width--;  width > 0;  width--) {
                 KERNEL_PUT_CHAR(' ');    nbr++;             /* Put width        */
             }
             continue;
 
         case 's':
-            if( (str = (char*)va_arg(args, char *)) == NULL ) {
+            if( (str = va_arg(args, char*)) == NULL ) {
                 str = "(NULL)";
             }
             if( ((len = (int)strlen(str)) > precision) && (precision > 0) ) {
@@ -282,7 +302,7 @@ int vprintk( const char *fmt, va_list args )
                 width  = sizeof(void *) << 1;
                 flags |= ZEROPAD;
             }
-            nbr += print_number((long)va_arg(args, void *), 16, width, precision, flags);
+            nbr += print_number((int32_t)va_arg(args, void *), 16, width, precision, flags);
             continue;
 
         case '%':
@@ -317,16 +337,16 @@ int vprintk( const char *fmt, va_list args )
         }
 
         if( qualifier == 'l' ) {
-            num = va_arg(args, uint32_t);           /*lint !e732*/
-            if(flags & SIGN)  num = (int32_t)num;   /*lint !e732*/
+            num = va_arg(args, uint32_t);
+          //if(flags & SIGN)  num = (int32_t)num;
         }
         else if( qualifier == 'h' ) {
-            num = (uint16_t)va_arg(args, int32_t);  /*ling !e732*/
-            if(flags & SIGN)  num = (int16_t)num;   /*lint !e732*/
+            num = (uint32_t)va_arg(args, int32_t);
+            if(flags & SIGN)  num = (int16_t)(num & 0xFFFF);
         }
         else {
-            num = va_arg(args, uint32_t);           /*lint !e732*/
-            if(flags & SIGN)  num = (int32_t)num;   /*lint !e732*/
+            num = va_arg(args, uint32_t);
+          //if(flags & SIGN)  num = (int32_t)num;
         }
         nbr += print_number((int32_t)num, base, width, precision, flags);
     }
